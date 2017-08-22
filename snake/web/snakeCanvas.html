@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <script type="text/javascript" src="snakeJS.js"></script>
+  </head>
+  <body>
+    <a href="#" onclick="window.clearInterval(int);return false;">Stop</a>
+    <a href="#" onclick="int=setInterval(snakeMove, 500);">Resume</a>
+    <a id="display"></a>
+    <canvas tabindex='1' id="myCanvas" width="500" height="500" style="border:1px solid #d3d3d3;" onkeydown="cambiarDireEvent(event)">
+      Your browser does not support the HTML5 canvas tag.
+    </canvas>
+    <script>
+      newSnakesNeurons(100);
+      snakeInit();
+      var int=setInterval(snakeMove, 25);
+    </script>
+  </body>
+</html>
