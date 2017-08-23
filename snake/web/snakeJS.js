@@ -4,17 +4,15 @@ var snake;
 var manzana;
 var puntaje;
 var comido;
-var currSnake=0;
-var snakes=[0];
-var alfa=0.15;
-var bestSnake={
-  "puntaje":-1
-};
+var currSnake;
+var snakes;
+var alfa=0.015;
+var bestSnakes;
 var tableroPosciciones=24;
 var vision= 24;
 var inputsCant=26;
 var movimientoContador;
-var generation=0;
+var generation;
 var hidden = [
   function(n){
     var suma=0;
@@ -43,8 +41,47 @@ var hidden = [
       mult=mult*no;
     }
     return Math.sin(mult)
-  },
+  }
 ]
+var hiddenSecond = [
+  function(n){
+    var suma=0;
+    for (no of n){
+      suma+=no;
+    }
+    return sigmoid(suma)
+  },
+  function(n){
+    var suma=0;
+    for (no of n){
+      suma+=no;
+    }
+    return (Math.atan(suma)/Math.PI*2)
+  },
+  function(n){
+    var mult=1;
+    for (no of n){
+      mult=mult*no;
+    }
+    return sigmoid(mult)
+  },
+  function(n){
+    var mult=1;
+    for (no of n){
+      mult=mult*no;
+    }
+    return (Math.atan(mult)/Math.PI*2)
+  }
+]
+function initVars(){
+  puntaje=0;
+  currSnake=0;
+  snakes=[0];
+  bestSnakes=[{
+    "puntaje":-1
+  }];
+  generation=0;
+}
 
 function snakeInit(){
   nextSnake();
@@ -84,7 +121,6 @@ function snakeMove(){
   snake.coordenadas.snakeHeadx +=(dirVector(snake.dire))[0];
   snake.coordenadas.snakeHeady +=(dirVector(snake.dire))[1];
   if (snake.coordenadas.snakeHeadx<0||snake.coordenadas.snakeHeadx>tableroPosciciones || snake.coordenadas.snakeHeady<0 || snake.coordenadas.snakeHeady>tableroPosciciones|| movimientoContador>=400) {
-    bestOne();
     snakeInit();
     ctx.fillStyle="#FFFFFF"
     ctx.fillRect(0,0,canvasSize,canvasSize);
@@ -103,7 +139,6 @@ function snakeMove(){
   comido=0;
   for (colaCheck of snake.tail){
     if (snake.coordenadas.snakeHeadx==colaCheck.x && snake.coordenadas.snakeHeady==colaCheck.y){
-      bestOne();
       snakeInit();
       ctx.fillStyle="#FFFFFF"
       ctx.fillRect(0,0,canvasSize,canvasSize);
@@ -246,7 +281,6 @@ function checkForWall(input){
   return input;
 }
 
-
 function checkForApple(input){
   if (2>snake.coordenadas.snakeHeadx-manzana.x && snake.coordenadas.snakeHeadx-manzana.x>-2 && 2>snake.coordenadas.snakeHeady-manzana.y && snake.coordenadas.snakeHeady-manzana.y>-2 ){
     input[5*(2+manzana.x-snake.coordenadas.snakeHeadx)+(2+manzana.y-snake.coordenadas.snakeHeady)]=1;
@@ -276,11 +310,6 @@ function see(){
   return input;
 }
 
-
-
-
-
-
 function readOutput(n){
   var pro=0;
   for (no of n){
@@ -296,8 +325,6 @@ function readOutput(n){
   else if (pro<0.3 && pro> -0.3) {
     return 0;
   }
-  console.log("error, promedio"+ pro);
-  console.log(n);
   return 0;
 }
 
@@ -305,11 +332,13 @@ function newSnakesNeurons(cantSnake){
   for (var c=0;c<cantSnake;c++){
     snakes[c]={
       "inputToHidden":[[0]],
+      "hiddenToHidden":[[0]],
       "hiddenToOutput":[0],
       "puntaje":0
     }
     var i=0;
     var inputToHidden=[[0]];
+    var hiddenToHidden=[[0]];
     var j;
     var hiddenToOutput=[0];
     for (i=0;i<=inputsCant;i++){
@@ -318,20 +347,28 @@ function newSnakesNeurons(cantSnake){
         inputToHidden[i][j]=Math.random()
       }
     }
-    for (i in hidden){
+    for (i in hidden) {
+      hiddenToHidden[i]=[0]
+      for (j in hiddenSecond){
+        hiddenToHidden[i][j]=Math.random()
+      }
+    }
+    for (i in hiddenSecond){
       hiddenToOutput[i]=Math.random()
     }
     snakes[c].inputToHidden=inputToHidden;
     snakes[c].hiddenToOutput=hiddenToOutput;
+    snakes[c].hiddenToHidden=hiddenToHidden;
   }
 }
 function newSnakesNeuronsFromBest(cantSnake){
   console.log("bestSnake es:");
-  console.log(bestSnake);
+  console.log(bestSnakes);
   var max=snakes.length;
   for (var c=max;c<(cantSnake+max);c++){
     snakes[c]={
       "inputToHidden":[[0]],
+      "hiddenToHidden":[[0]],
       "hiddenToOutput":[0],
       "puntaje":0
     }
@@ -339,59 +376,79 @@ function newSnakesNeuronsFromBest(cantSnake){
     var inputToHidden=[[0]];
     var j;
     var hiddenToOutput=[0];
+    var hiddenToHidden=[[0]]
     for (i=0;i<=inputsCant;i++){
       inputToHidden[i]=[0];
       for(j in hidden){
-        inputToHidden[i][j]=bestSnake.inputToHidden[i][j]+(Math.random()*alfa)
+        inputToHidden[i][j]=bestSnakes[Math.floor(Math.random()*(bestSnakes.length))].inputToHidden[i][j]+(Math.random()*alfa)
       }
     }
-    for (i in hidden){
-      hiddenToOutput[i]=bestSnake.hiddenToOutput[i]+(Math.random()*alfa)
+    for (i in hidden) {
+      hiddenToHidden[i]=[0]
+      for (j in hiddenSecond){
+        hiddenToHidden[i][j]=bestSnakes[Math.floor(Math.random()*(bestSnakes.length))].hiddenToHidden[i][j]+(Math.random()*alfa)
+      }
+    }
+    for (i in hiddenSecond){
+      hiddenToOutput[i]=bestSnakes[Math.floor(Math.random()*(bestSnakes.length))].hiddenToOutput[i]+(Math.random()*alfa)
     }
     snakes[c].inputToHidden=inputToHidden;
+    snakes[c].hiddenToHidden=hiddenToHidden;
     snakes[c].hiddenToOutput=hiddenToOutput;
   }
-  snakes[cantSnake+max]={
-    "inputToHidden":[[0]],
-    "hiddenToOutput":[0],
-    "puntaje":0
-  }
-  snakes[cantSnake+max].inputToHidden=bestSnake.inputToHidden;
-  snakes[cantSnake+max].hiddenToOutput=bestSnake.hiddenToOutput;
+  snakes=snakes.concat(bestSnakes);
 }
 function think(input){
   var f;
   var i;
+  var j;
   var arToHid=[0];
   var hidRes=[0];
+  var hidResToHid=[0];
+  var hidResSecond=[0];
   var hidToOut=[0];
-  for (f in hidden){
-    arToHid=[0];
-    hidRes=[0];
-    for (i=0;i<inputsCant;i++){
-      arToHid[i]=input[i]*snakes[currSnake].inputToHidden[i][f];
+  for(j in hiddenSecond){
+    for (f in hidden){
+      for (i=0;i<inputsCant;i++){
+        arToHid[i]=input[i]*snakes[currSnake].inputToHidden[i][f];
+      }
+      hidRes[f]=hidden[f](arToHid);
+      hidResToHid[f]=hidRes[f]*snakes[currSnake].hiddenToHidden[f][j];
     }
-    hidRes[f]=hidden[f](arToHid);
-    hidToOut[f]=hidRes[f]*snakes[currSnake].hiddenToOutput[f]
+  hidResSecond[j]=hiddenSecond[j](hidResToHid);
+  hidToOut[j]=hidResSecond[j]*snakes[currSnake].hiddenToOutput[j];
   }
   return readOutput(hidToOut);
 }
 
 function nextSnake(){
+  snakes[currSnake].puntaje=puntaje;
+  bestOne();
   currSnake++;
   if (currSnake>=snakes.length) {
     snakes=[0];
-    newSnakesNeurons(25);
-    newSnakesNeuronsFromBest(74);
+    newSnakesNeurons(20);
+    newSnakesNeuronsFromBest(73);
     currSnake=0;
     generation++;
     console.log("generacion: " + generation);
   }
 }
 function bestOne(){
-  console.log("puntaje actual" + puntaje + "puntaje anterio" +bestSnake.puntaje);
-  if(bestSnake.puntaje<puntaje){
-    bestSnake=snakes[currSnake];
-    bestSnake.puntaje=puntaje;
+  if(bestSnakes[0].puntaje<snakes[currSnake].puntaje){
+    bestSnakes.push(snakes[currSnake]);
+    inToArrayOrdered();
   }
+}
+function sigmoid(t) {
+    return 1/(1+Math.pow(Math.E, -t));
+}
+function inToArrayOrdered(){
+  bestSnakes=bestSnakes.sort(compareNumbers);
+  while(bestSnakes.length>7){
+    bestSnakes.splice(0,1);
+  }
+}
+function compareNumbers(a,b){
+  return a.puntaje-b.puntaje;
 }
