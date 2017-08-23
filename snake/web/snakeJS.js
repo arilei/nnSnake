@@ -444,11 +444,20 @@ function sigmoid(t) {
     return 1/(1+Math.pow(Math.E, -t));
 }
 function inToArrayOrdered(){
+  console.log("pre sort");
+  console.log(bestSnakes);
   bestSnakes=bestSnakes.sort(compareNumbers);
+  console.log("post sort");
+  console.log(bestSnakes);
   while(bestSnakes.length>7){
     bestSnakes.splice(0,1);
   }
 }
 function compareNumbers(a,b){
-  return a.puntaje-b.puntaje;
+  if (a.puntaje>=b.puntaje){
+    return 1;
+  }
+  else {
+    return -1
+  }
 }
