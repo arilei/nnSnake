@@ -6,11 +6,11 @@ var puntaje;
 var comido;
 var currSnake;
 var snakes;
-var alfa=0.015;
+var alfa=0.01;
 var bestSnakes;
 var tableroPosciciones=24;
 var vision= 24;
-var inputsCant=26;
+var inputsCant=30;
 var movimientoContador;
 var generation;
 var hidden = [
@@ -49,7 +49,7 @@ var hiddenSecond = [
     for (no of n){
       suma+=no;
     }
-    return sigmoid(suma)
+    return (sigmoid(suma)-0.5)*2
   },
   function(n){
     var suma=0;
@@ -63,7 +63,7 @@ var hiddenSecond = [
     for (no of n){
       mult=mult*no;
     }
-    return sigmoid(mult)
+    return (sigmoid(mult)-0.5)*2
   },
   function(n){
     var mult=1;
@@ -87,6 +87,7 @@ function snakeInit(){
   nextSnake();
   comido=0;
   puntaje=0;
+  snakes[currSnake].puntaje=0;
   snake={
         "dire":1,
      "coordenadas":
@@ -107,6 +108,7 @@ function snakeInit(){
         "y":12
       }]
 };
+
 newApple();
 }
 
@@ -114,19 +116,29 @@ function snakeMove(){
   movimientoContador++;
   var mov=think(see());
   snakeDirChange(mov);
+  snakes[currSnake].puntaje+=0.01
   var c = document.getElementById("myCanvas");
   var ctx = c.getContext("2d");
   var posx=snake.coordenadas.snakeHeadx;
   var posy=snake.coordenadas.snakeHeady;
   snake.coordenadas.snakeHeadx +=(dirVector(snake.dire))[0];
   snake.coordenadas.snakeHeady +=(dirVector(snake.dire))[1];
-  if (snake.coordenadas.snakeHeadx<0||snake.coordenadas.snakeHeadx>tableroPosciciones || snake.coordenadas.snakeHeady<0 || snake.coordenadas.snakeHeady>tableroPosciciones|| movimientoContador>=400) {
+  if (movimientoContador>=500) {
+    console.log("murio por sin movimientos");
+    snakeInit();
+    ctx.fillStyle="#FFFFFF"
+    ctx.fillRect(0,0,canvasSize,canvasSize);
+    return;
+  }
+  if (snake.coordenadas.snakeHeadx<0||snake.coordenadas.snakeHeadx>tableroPosciciones || snake.coordenadas.snakeHeady<0 || snake.coordenadas.snakeHeady>tableroPosciciones) {
+    console.log("murio por comio pared");
     snakeInit();
     ctx.fillStyle="#FFFFFF"
     ctx.fillRect(0,0,canvasSize,canvasSize);
     return;
   }
   if (snake.coordenadas.snakeHeadx==manzana.x && snake.coordenadas.snakeHeady==manzana.y){
+    snakes[currSnake].puntaje++
     puntaje+=1;
     comido=1;
     newApple();
@@ -139,6 +151,7 @@ function snakeMove(){
   comido=0;
   for (colaCheck of snake.tail){
     if (snake.coordenadas.snakeHeadx==colaCheck.x && snake.coordenadas.snakeHeady==colaCheck.y){
+      console.log("murio por comio cola");
       snakeInit();
       ctx.fillStyle="#FFFFFF"
       ctx.fillRect(0,0,canvasSize,canvasSize);
@@ -161,7 +174,7 @@ function snakeMove(){
 function snakeDirChange(dir){
   var dir= snake.dire + dir;
   if (dir!=0) {
-    movimientoContador++;
+    movimientoContador+=2;
   }
   if (dir<0) {
       dir +=4
@@ -289,12 +302,19 @@ function checkForApple(input){
 }
 
 function checkDir(input){
-  input[12]=(snake.dire+1)/4
+  for (var i = 27; i < input.length; i++) {
+    input[i]=0;
+  }
+  input[27+snake.dire]=1;
+  return input;
+}
+function checkMov(input){
+  input[12]=(movimientoContador)/500
   return input;
 }
 function searchApple(input){
-  input[25]=snake.coordenadas.snakeHeadx-manzana.x;
-  input[25]=snake.coordenadas.snakeHeady-manzana.y;
+  input[25]=(snake.coordenadas.snakeHeadx-manzana.x)/24;
+  input[26]=(snake.coordenadas.snakeHeady-manzana.y)/24;
   return input;
 }
 function see(){
@@ -307,6 +327,7 @@ function see(){
   input=checkForTail(input);
   input=checkDir(input);
   input=searchApple(input);
+  input=checkMov(input);
   return input;
 }
 
@@ -316,13 +337,13 @@ function readOutput(n){
     pro+=no;
   }
   pro=pro/n.length;
-  if (pro>0.3) {
+  if (pro>0.2) {
     return 1;
   }
-  else if (pro< -0.3) {
+  else if (pro< -0.2) {
     return -1;
   }
-  else if (pro<0.3 && pro> -0.3) {
+  else if (pro<0.2 && pro> -0.2) {
     return 0;
   }
   return 0;
@@ -396,7 +417,6 @@ function newSnakesNeuronsFromBest(cantSnake){
     snakes[c].hiddenToHidden=hiddenToHidden;
     snakes[c].hiddenToOutput=hiddenToOutput;
   }
-  snakes=snakes.concat(bestSnakes);
 }
 function think(input){
   var f;
@@ -422,22 +442,27 @@ function think(input){
 }
 
 function nextSnake(){
-  snakes[currSnake].puntaje=puntaje;
-  bestOne();
+  console.log("puntaje:" + snakes[currSnake].puntaje);
+  bestOne(snakes[currSnake]);
   currSnake++;
   if (currSnake>=snakes.length) {
     snakes=[0];
     newSnakesNeurons(20);
-    newSnakesNeuronsFromBest(73);
+    newSnakesNeuronsFromBest(80);
     currSnake=0;
     generation++;
     console.log("generacion: " + generation);
   }
 }
-function bestOne(){
-  if(bestSnakes[0].puntaje<snakes[currSnake].puntaje){
-    bestSnakes.push(snakes[currSnake]);
+function bestOne(snakeAux){
+  if(bestSnakes[0].puntaje<snakeAux.puntaje){
+    console.log("puntaje dif: " + bestSnakes[0].puntaje + " "+ snakeAux.puntaje);
+    console.log(snakeAux);
+    bestSnakes.push(snakeAux);
     inToArrayOrdered();
+    while(bestSnakes.length>7){
+      bestSnakes.splice(0,1);
+    }
   }
 }
 function sigmoid(t) {
@@ -446,18 +471,12 @@ function sigmoid(t) {
 function inToArrayOrdered(){
   console.log("pre sort");
   console.log(bestSnakes);
-  bestSnakes=bestSnakes.sort(compareNumbers);
+  bestSnakes.sort(function (a,b){
+    return (a.puntaje-b.puntaje)
+  });
   console.log("post sort");
   console.log(bestSnakes);
-  while(bestSnakes.length>7){
-    bestSnakes.splice(0,1);
-  }
 }
-function compareNumbers(a,b){
-  if (a.puntaje>=b.puntaje){
-    return 1;
-  }
-  else {
-    return -1
-  }
+function loadBestOnes(bestSnakesObject){
+  bestSnakes=bestSnakesObject;
 }
